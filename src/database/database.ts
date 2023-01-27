@@ -2,6 +2,7 @@ import { Index } from "./index";
 import { KanjiDoc, loadKanjiIndex } from "./indices/kanji.index";
 import { NameDoc, loadNameIndex } from "./indices/name.index";
 import { VocabularyDoc, loadVocabularyIndex } from "./indices/vocabulary.index";
+import { IndexSearchResult } from "./types";
 
 export class Database {
   static indices: [
@@ -33,12 +34,16 @@ export class Database {
     const [nameIndexResults, vocabularyIndexResults, kanjiIndexResults] =
       (await Promise.all(
         this.indices.map(async index => await index.searchJapanese(term))
-      )) as [NameDoc[], VocabularyDoc[], KanjiDoc[]];
+      )) as [
+        IndexSearchResult<NameDoc>[],
+        IndexSearchResult<VocabularyDoc>[],
+        IndexSearchResult<KanjiDoc>[]
+      ];
 
-    return {
-      name: nameIndexResults,
-      vocabulary: vocabularyIndexResults,
-      kanji: kanjiIndexResults,
-    };
+    return [
+      ...nameIndexResults,
+      ...vocabularyIndexResults,
+      ...kanjiIndexResults,
+    ].sort(({ _score: a }, { _score: b }) => b - a);
   }
 }

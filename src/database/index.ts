@@ -1,9 +1,10 @@
 import { toHiragana, toKatakana } from "wanakana";
-import { Document, IIndex, Options } from "./types";
+import { Document, IIndex, IndexSearchResult, Options } from "./types";
 
 export class Index<TDocument extends Document> implements IIndex<TDocument> {
-  options: Options<TDocument> = { name: "", searchableTextFields: [] };
+  options: Options<TDocument> = { name: null, searchableTextFields: [] };
   documents: TDocument[] = [];
+  private _cache: Record<string, TDocument[]> = {};
 
   constructor(options: Options<TDocument>) {
     this.options = options;
@@ -14,22 +15,51 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
   }
 
   async searchJapanese(term: string) {
-    const terms = [...new Set([term, toHiragana(term), toKatakana(term)])];
+    const kana = [toHiragana(term), toKatakana(term)].map(k => {
+      if (/[a-zA-Z]/.test(k.charAt(k.length - 1))) {
+        return k.slice(0, -1);
+      }
+      return k;
+    });
+
+    const terms = [...new Set([term, ...kana])];
+    console.log(terms);
     const results = (await Promise.all(terms.map(t => this.search(t)))) || [];
 
     return [...new Set(results?.flat())];
   }
 
-  async search(term: string) {
-    const { searchableTextFields } = this.options;
-    return this.documents.filter(doc => {
-      return searchableTextFields.some(field => {
+  async search(term: string): Promise<IndexSearchResult<TDocument>[]> {
+    const { searchableTextFields, name: _index } = this.options;
+    const results: IndexSearchResult<TDocument>[] = [];
+    let _id = 0;
+    for (const doc of this.documents) {
+      for (const field of searchableTextFields) {
         const val = doc[field];
-        return Array.isArray(val)
-          ? val.some(i => i?.indexOf(term) >= 0)
-          : String(val)?.indexOf(term) >= 0;
-      });
-    });
+        const valContaining = Array.isArray(val)
+          ? (val.find(i => i?.indexOf(term) >= 0) as string)
+          : String(val)?.indexOf(term) >= 0
+          ? String(val)
+          : null;
+
+        if (valContaining) {
+          const _score = term.length / valContaining.length;
+          results.push({
+            ...doc,
+            _index,
+            _id,
+            _score,
+          });
+        }
+      }
+      _id++;
+    }
+    this._cache[term] = results;
+    return results;
+  }
+
+  get(id: number) {
+    return this.documents[id];
   }
 
   export(): string {

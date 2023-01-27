@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
   "scripts": {
     "start": "webpack --config webpack.config.ts --watch",
     "build": "webpack --config webpack.config.ts",
     "link": " cd dist && npm link && cd ..",
-    "test": "jest",
-    "test:watch": "jest --watch",
     "stats": "webpack --profile --config webpack.config.ts"
   },
   "keywords": [],

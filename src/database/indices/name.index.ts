@@ -5,7 +5,7 @@ export interface NameDoc extends Document {
   n: string;
   d: string;
   t: string;
-  r: string;
+  r: string[];
 }
 
 export const loadNameIndex = async (url: string) =>

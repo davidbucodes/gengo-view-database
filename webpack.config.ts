@@ -23,8 +23,9 @@ const config: Configuration = {
     extensions: [".ts", ".js"],
   },
   output: {
-    filename: "bundle.js",
+    filename: "index.js",
     path: path.resolve(__dirname, "dist"),
+    libraryTarget: "commonjs",
   },
   performance: {
     hints: false,
