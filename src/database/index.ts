@@ -1,5 +1,11 @@
 import { toHiragana, toKatakana } from "wanakana";
-import { Document, IIndex, IndexSearchResult, Options } from "./types";
+import {
+  Document,
+  IIndex,
+  IndexSearchResult,
+  Options,
+  SearchableNumberField,
+} from "./types";
 
 export class Index<TDocument extends Document> implements IIndex<TDocument> {
   options: Options<TDocument> = { name: null, searchableTextFields: [] };
@@ -22,14 +28,17 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
       return k;
     });
 
-    const terms = [...new Set([term, ...kana])];
+    const romaji = term.length > 1 ? term : "";
+
+    const terms = [...new Set([romaji, ...kana])].filter(t => t);
     console.log(terms);
-    const results = (await Promise.all(terms.map(t => this.search(t)))) || [];
+    const results =
+      (await Promise.all(terms.map(t => this.searchText(t)))) || [];
 
     return [...new Set(results?.flat())];
   }
 
-  async search(term: string): Promise<IndexSearchResult<TDocument>[]> {
+  async searchText(term: string): Promise<IndexSearchResult<TDocument>[]> {
     const { searchableTextFields, name: _index } = this.options;
     const results: IndexSearchResult<TDocument>[] = [];
     let _id = 0;
@@ -51,6 +60,34 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
             _score,
           });
         }
+      }
+      _id++;
+    }
+    this._cache[term] = results;
+    return results;
+  }
+
+  async searchNumber(
+    term: number,
+    field: SearchableNumberField<TDocument>[number]
+  ): Promise<IndexSearchResult<TDocument>[]> {
+    const { name: _index } = this.options;
+    const results: IndexSearchResult<TDocument>[] = [];
+    let _id = 0;
+    for (const doc of this.documents) {
+      const val = doc[field];
+      const equalsOrContaining = Array.isArray(val)
+        ? (val.find(i => i === term) as number)
+        : val === term;
+
+      if (equalsOrContaining) {
+        const _score = 1;
+        results.push({
+          ...doc,
+          _index,
+          _id,
+          _score,
+        });
       }
       _id++;
     }
