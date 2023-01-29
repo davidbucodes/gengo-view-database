@@ -10,7 +10,6 @@ import {
 export class Index<TDocument extends Document> implements IIndex<TDocument> {
   options: Options<TDocument> = { name: null, searchableTextFields: [] };
   documents: TDocument[] = [];
-  private _cache: Record<string, TDocument[]> = {};
 
   constructor(options: Options<TDocument>) {
     this.options = options;
@@ -63,7 +62,6 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
       }
       _id++;
     }
-    this._cache[term] = results;
     return results;
   }
 
@@ -91,7 +89,6 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
       }
       _id++;
     }
-    this._cache[term] = results;
     return results;
   }
 
