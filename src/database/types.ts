@@ -28,6 +28,10 @@ export interface IIndex<TDocument extends Document> {
 
 export type IndexSearchResult<TDocument> = TDocument & {
   _id: IdField;
-  _score: number;
+  _score?: number;
   _index: IndexName;
+};
+
+export type SearchOptions = {
+  index: IndexName;
 };

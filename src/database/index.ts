@@ -54,11 +54,11 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
     term: string,
     { scorePenalty }: { scorePenalty: number }
   ): Promise<IndexSearchResult<TDocument>[]> {
-    const { searchableTextFields, name: _index } = this.options;
+    const { searchableTextFields, name: index } = this.options;
     const results: IndexSearchResult<TDocument>[] = [];
-    let _id = -1;
+    let id = -1;
     for (const doc of this.documents) {
-      _id++;
+      id++;
       const valContaining = (() => {
         for (const field of searchableTextFields) {
           const val = doc[field];
@@ -73,16 +73,11 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
         }
       })();
       if (valContaining) {
-        const _score =
+        const score =
           term === valContaining
             ? 1
             : term.length / valContaining.length - scorePenalty;
-        results.push({
-          ...doc,
-          _index,
-          _id,
-          _score,
-        });
+        results.push(this.documentToSearchResult(doc, index, id, score));
       }
     }
     return results;
@@ -92,9 +87,9 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
     term: number,
     field: SearchableNumberField<TDocument>[number]
   ): Promise<IndexSearchResult<TDocument>[]> {
-    const { name: _index } = this.options;
+    const { name: index } = this.options;
     const results: IndexSearchResult<TDocument>[] = [];
-    let _id = 0;
+    let id = 0;
     for (const doc of this.documents) {
       const val = doc[field];
       const equalsOrContaining = Array.isArray(val)
@@ -102,21 +97,16 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
         : val === term;
 
       if (equalsOrContaining) {
-        const _score = 1;
-        results.push({
-          ...doc,
-          _index,
-          _id,
-          _score,
-        });
+        results.push(this.documentToSearchResult(doc, index, id));
       }
-      _id++;
+      id++;
     }
     return results;
   }
 
   get(id: number) {
-    return this.documents[id];
+    const doc = this.documents[id];
+    return this.documentToSearchResult(doc, this.options.name, id);
   }
 
   export(): string {
@@ -132,5 +122,19 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
     const index = new Index<TDocument>(parsedIndex.options);
     index.addDocuments(parsedIndex.documents);
     return index;
+  }
+
+  private documentToSearchResult(
+    doc: TDocument,
+    _index: string,
+    _id: number,
+    _score?: number
+  ): IndexSearchResult<TDocument> {
+    return {
+      ...doc,
+      _index,
+      _id,
+      _score,
+    } as IndexSearchResult<TDocument>;
   }
 }

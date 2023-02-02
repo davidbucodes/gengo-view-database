@@ -37,20 +37,21 @@ export class Database {
     if (!this.indices) {
       console.error("Database is not loaded; cannot perform search");
     }
-    const [nameIndexResults, vocabularyIndexResults, kanjiIndexResults] =
-      (await Promise.all(
-        this.indices.map(async index => await index.searchJapanese(term))
-      )) as [
-        IndexSearchResult<NameDoc>[],
-        IndexSearchResult<VocabularyDoc>[],
-        IndexSearchResult<KanjiDoc>[]
-      ];
+    if (!term) {
+      return [];
+    }
+    term = term.trim();
 
-    return [
-      ...kanjiIndexResults,
-      ...vocabularyIndexResults,
-      ...nameIndexResults,
-    ].sort(({ _score: a }, { _score: b }) => b - a);
+    const results = (
+      await Promise.all(
+        this.indices.map(async index => await index.searchJapanese(term))
+      )
+    )?.flat() as Array<
+      | IndexSearchResult<NameDoc>
+      | IndexSearchResult<VocabularyDoc>
+      | IndexSearchResult<KanjiDoc>
+    >;
+    return results.sort(({ _score: a }, { _score: b }) => b - a);
   }
 
   static async searchNumber(
@@ -68,11 +69,11 @@ export class Database {
     indexName: "kanji",
     field: SearchableNumberField<KanjiDoc>[number]
   ): Promise<IndexSearchResult<KanjiDoc>[]>;
-  static async searchNumber<T extends Document>(
+  static async searchNumber(
     term: number,
     indexName: IndexName,
-    field: SearchableNumberField<T>[number]
-  ): Promise<IndexSearchResult<T>[]> {
+    field: SearchableNumberField<unknown>[number]
+  ): Promise<IndexSearchResult<unknown>[]> {
     if (!this.indices) {
       console.error("Database is not loaded; cannot perform search");
     }
@@ -83,7 +84,7 @@ export class Database {
 
     return results.sort(
       ({ _score: a }, { _score: b }) => b - a
-    ) as IndexSearchResult<T>[];
+    ) as IndexSearchResult<unknown>[];
   }
 
   static get(id: IdField, indexName: "name"): IndexSearchResult<NameDoc>;
@@ -92,17 +93,12 @@ export class Database {
     indexName: "vocabulary"
   ): IndexSearchResult<VocabularyDoc>;
   static get(id: IdField, indexName: "kanji"): IndexSearchResult<KanjiDoc>;
-  static get<T extends Document>(
-    id: IdField,
-    indexName: IndexName
-  ): IndexSearchResult<T> {
+  static get(id: IdField, indexName: IndexName): IndexSearchResult<unknown> {
     if (!this.indices) {
       console.error("Database is not loaded; cannot perform search");
     }
-    const index = this.indices.find(
-      i => i.options.name === indexName
-    ) as unknown as Index<Document>;
+    const index = this.indices.find(i => i.options.name === indexName);
 
-    return index.documents[id] as IndexSearchResult<T>;
+    return index.get(id) as IndexSearchResult<unknown>;
   }
 }
