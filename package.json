@@ -16,9 +16,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "lodash": "^4.17.21",
     "wanakana": "^5.0.2"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.191",
     "@types/wanakana": "^4.0.3",
     "@types/webpack": "^5.28.0",
     "@types/webpack-bundle-analyzer": "^4.6.0",

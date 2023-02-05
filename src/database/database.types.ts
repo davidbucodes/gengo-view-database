@@ -1,4 +1,4 @@
-export interface Document extends Object {}
+import { IndexDocument } from "./doc.types";
 
 export type IndexName = "name" | "vocabulary" | "kanji";
 
@@ -21,9 +21,19 @@ export type SearchableNumberField<TDocument> = {
   [T in keyof TDocument]: TDocument[T] extends SearchableNumberType ? T : never;
 }[keyof TDocument][];
 
-export interface IIndex<TDocument extends Document> {
+export interface IIndex<TDocument extends IndexDocument> {
   options: Options<TDocument>;
   documents: TDocument[];
+  addDocuments(documents: TDocument[]): void;
+  searchText(
+    term: string,
+    { scorePenalty }?: { scorePenalty: number }
+  ): Promise<IndexSearchResult<TDocument>[]>;
+  searchNumber(
+    term: number,
+    field: SearchableNumberField<TDocument>[number]
+  ): Promise<IndexSearchResult<TDocument>[]>;
+  get(id: number): IndexSearchResult<TDocument>;
 }
 
 export type IndexSearchResult<TDocument> = TDocument & {
@@ -32,6 +42,7 @@ export type IndexSearchResult<TDocument> = TDocument & {
   _index: IndexName;
 };
 
-export type SearchOptions = {
+export type SearchOptions<TIndex> = {
   index: IndexName;
+  fields: SearchableTextField<TIndex>[] | SearchableNumberField<TIndex>[];
 };

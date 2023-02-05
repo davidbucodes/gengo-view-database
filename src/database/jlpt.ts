@@ -1,12 +1,14 @@
 import { Database } from "./database";
-import { KanjiDoc, VocabularyDoc } from "./indices";
-import { IndexSearchResult } from "./types";
+import { IndexSearchResult } from "./database.types";
+import { KanjiDocument, VocabularyDocument } from "./doc.types";
 
 export type JlptLevel = "1" | "2" | "3" | "4" | "5";
 
 type JlptDB = {
-  kanji: Partial<Record<JlptLevel, IndexSearchResult<KanjiDoc>[]>>;
-  vocabulary: Partial<Record<JlptLevel, IndexSearchResult<VocabularyDoc>[]>>;
+  kanji: Partial<Record<JlptLevel, IndexSearchResult<KanjiDocument>[]>>;
+  vocabulary: Partial<
+    Record<JlptLevel, IndexSearchResult<VocabularyDocument>[]>
+  >;
 };
 
 export const jlptLevels: JlptLevel[] = ["5", "4", "3", "2", "1"];
@@ -22,19 +24,19 @@ export class Jlpt {
       jlptLevels
         .map(level => [
           new Promise(async res => {
-            this.db.kanji[level] = await Database.searchNumber(
-              Number(level),
-              "kanji",
-              "jlpt"
-            );
+            this.db.kanji[level] =
+              await Database.indices.kanjiIndex.searchNumber(
+                Number(level),
+                "jlpt"
+              );
             res(true);
           }),
           new Promise(async res => {
-            this.db.vocabulary[level] = await Database.searchNumber(
-              Number(level),
-              "vocabulary",
-              "jlpt"
-            );
+            this.db.vocabulary[level] =
+              await Database.indices.vocabularyIndex.searchNumber(
+                Number(level),
+                "jlpt"
+              );
             res(true);
           }),
         ])

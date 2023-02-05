@@ -1,13 +1,14 @@
-import { isRomaji, toHiragana, toKatakana } from "wanakana";
 import {
-  Document,
   IIndex,
   IndexSearchResult,
   Options,
   SearchableNumberField,
-} from "./types";
+} from "./database.types";
+import { IndexDocument } from "./doc.types";
 
-export class Index<TDocument extends Document> implements IIndex<TDocument> {
+export class Index<TDocument extends IndexDocument>
+  implements IIndex<TDocument>
+{
   options: Options<TDocument> = { name: null, searchableTextFields: [] };
   documents: TDocument[] = [];
 
@@ -15,44 +16,13 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
     this.options = options;
   }
 
-  addDocuments(documents: TDocument[]) {
+  addDocuments(documents: TDocument[]): void {
     this.documents = [...this.documents, ...documents];
-  }
-
-  async searchJapanese(term: string) {
-    const kana = [toHiragana(term), toKatakana(term)]
-      .map(k => {
-        if (/[a-zA-Z]/.test(k.charAt(k.length - 1))) {
-          return k.slice(0, -1);
-        }
-        return k;
-      })
-      .filter(t => t);
-
-    const validTerm = !isRomaji(term) ? term : term.length > 1 ? term : "";
-
-    const terms = [...new Set([validTerm, ...kana])].filter(t => t);
-    console.log(terms);
-    const results =
-      (await Promise.all(
-        terms.map(t => {
-          const scorePenalty = t === validTerm ? 0 : 0.1;
-          console.log(t, validTerm, scorePenalty);
-          return this.searchText(t, { scorePenalty });
-        })
-      )) || [];
-
-    return Object.values(
-      results?.flat()?.reduce((acc, curr) => {
-        acc[curr._id] = curr;
-        return acc;
-      }, {} as Record<number, IndexSearchResult<TDocument>>)
-    );
   }
 
   async searchText(
     term: string,
-    { scorePenalty }: { scorePenalty: number }
+    { scorePenalty }: { scorePenalty: number } = { scorePenalty: 0 }
   ): Promise<IndexSearchResult<TDocument>[]> {
     const { searchableTextFields, name: index } = this.options;
     const results: IndexSearchResult<TDocument>[] = [];
@@ -104,7 +74,7 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
     return results;
   }
 
-  get(id: number) {
+  get(id: number): IndexSearchResult<TDocument> {
     const doc = this.documents[id];
     return this.documentToSearchResult(doc, this.options.name, id);
   }
@@ -116,7 +86,7 @@ export class Index<TDocument extends Document> implements IIndex<TDocument> {
     } as IIndex<TDocument>);
   }
 
-  static from<TDocument extends Document>(
+  static from<TDocument extends IndexDocument>(
     parsedIndex: IIndex<TDocument>
   ): Index<TDocument> {
     const index = new Index<TDocument>(parsedIndex.options);

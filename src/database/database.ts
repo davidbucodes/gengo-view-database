@@ -1,104 +1,93 @@
+import { uniqBy } from "lodash";
+import { isRomaji, toHiragana, toKatakana } from "wanakana";
+import { IIndex } from "./database.types";
+import { KanjiDocument, NameDocument, VocabularyDocument } from "./doc.types";
 import { Index } from "./index";
-import { KanjiDoc, loadKanjiIndex } from "./indices/kanji.index";
-import { NameDoc, loadNameIndex } from "./indices/name.index";
-import { VocabularyDoc, loadVocabularyIndex } from "./indices/vocabulary.index";
-import {
-  Document,
-  IdField,
-  IndexName,
-  IndexSearchResult,
-  SearchableNumberField,
-} from "./types";
 
 export class Database {
-  static indices: [
-    nameIndex: Index<NameDoc>,
-    vocabularyIndex: Index<VocabularyDoc>,
-    kanjiIndex: Index<KanjiDoc>
-  ];
+  static indices: {
+    nameIndex: Index<NameDocument>;
+    vocabularyIndex: Index<VocabularyDocument>;
+    kanjiIndex: Index<KanjiDocument>;
+  };
+  static all: Database;
+
   static async load({
-    nameIndexUrl = "./indices/name.index.json",
-    vocabularyIndexUrl = "./indices/vocabulary.index.json",
-    kanjiIndexUrl = "./indices/kanji.index.json",
+    nameIndexUrl,
+    vocabularyIndexUrl,
+    kanjiIndexUrl,
   }: {
     nameIndexUrl: string;
     vocabularyIndexUrl: string;
     kanjiIndexUrl: string;
   }) {
-    const allLoaded = await Promise.all([
-      loadNameIndex(nameIndexUrl),
-      loadVocabularyIndex(vocabularyIndexUrl),
-      loadKanjiIndex(kanjiIndexUrl),
+    const [nameIndex, vocabularyIndex, kanjiIndex] = await Promise.all([
+      this.loadIndex<NameDocument>(nameIndexUrl),
+      this.loadIndex<VocabularyDocument>(vocabularyIndexUrl),
+      this.loadIndex<KanjiDocument>(kanjiIndexUrl),
     ]);
-    this.indices = allLoaded;
+    this.indices = { nameIndex, vocabularyIndex, kanjiIndex };
+    this.all = new Database();
   }
 
-  static async searchText(term: string) {
-    if (!this.indices) {
+  private static async loadIndex<DocType>(url: string) {
+    return new Promise<Index<DocType>>(async res => {
+      const json = (await (await fetch(url)).json()) as IIndex<DocType>;
+      return res(Index.from<DocType>(json));
+    });
+  }
+
+  async searchJapanese(term: string = "") {
+    if (!Database.indices) {
       console.error("Database is not loaded; cannot perform search");
-    }
-    if (!term) {
       return [];
     }
     term = term.trim();
+    if (!term) {
+      return [];
+    }
+
+    const kana = [toHiragana(term), toKatakana(term)]
+      .map(k => {
+        if (/[a-zA-Z]/.test(k.charAt(k.length - 1))) {
+          return k.slice(0, -1);
+        }
+        return k;
+      })
+      .filter(t => t);
+
+    const validTerm = !isRomaji(term) ? term : term.length > 1 ? term : "";
+
+    const terms = [...new Set([validTerm, ...kana])].filter(t => t);
+
+    const allIndices = [
+      Database.indices.kanjiIndex,
+      Database.indices.vocabularyIndex,
+      Database.indices.nameIndex,
+    ];
+
+    const termToIndexMap = terms
+      .map(term =>
+        allIndices.map(index => [term, index] as [string, typeof index])
+      )
+      .flat();
 
     const results = (
       await Promise.all(
-        this.indices.map(async index => await index.searchJapanese(term))
+        termToIndexMap.map(([term, index]) => {
+          const scorePenalty = term === validTerm ? 0 : 0.1;
+          console.log(term, validTerm, scorePenalty);
+          return new Promise<ReturnType<typeof index.searchText>>(resolve => {
+            const results = index.searchText(term, { scorePenalty });
+            resolve(results);
+          });
+        })
       )
-    )?.flat() as Array<
-      | IndexSearchResult<NameDoc>
-      | IndexSearchResult<VocabularyDoc>
-      | IndexSearchResult<KanjiDoc>
-    >;
-    return results.sort(({ _score: a }, { _score: b }) => b - a);
-  }
+    ).flat();
 
-  static async searchNumber(
-    term: number,
-    indexName: "name",
-    field: SearchableNumberField<NameDoc>[number]
-  ): Promise<IndexSearchResult<NameDoc>[]>;
-  static async searchNumber(
-    term: number,
-    indexName: "vocabulary",
-    field: SearchableNumberField<VocabularyDoc>[number]
-  ): Promise<IndexSearchResult<VocabularyDoc>[]>;
-  static async searchNumber(
-    term: number,
-    indexName: "kanji",
-    field: SearchableNumberField<KanjiDoc>[number]
-  ): Promise<IndexSearchResult<KanjiDoc>[]>;
-  static async searchNumber(
-    term: number,
-    indexName: IndexName,
-    field: SearchableNumberField<unknown>[number]
-  ): Promise<IndexSearchResult<unknown>[]> {
-    if (!this.indices) {
-      console.error("Database is not loaded; cannot perform search");
-    }
-    const index = this.indices.find(
-      i => i.options.name === indexName
-    ) as unknown as Index<Document>;
-    const results = await index.searchNumber(term, field as never);
+    const sortedResults =
+      results.sort(({ _score: a }, { _score: b }) => b - a) || [];
 
-    return results.sort(
-      ({ _score: a }, { _score: b }) => b - a
-    ) as IndexSearchResult<unknown>[];
-  }
-
-  static get(id: IdField, indexName: "name"): IndexSearchResult<NameDoc>;
-  static get(
-    id: IdField,
-    indexName: "vocabulary"
-  ): IndexSearchResult<VocabularyDoc>;
-  static get(id: IdField, indexName: "kanji"): IndexSearchResult<KanjiDoc>;
-  static get(id: IdField, indexName: IndexName): IndexSearchResult<unknown> {
-    if (!this.indices) {
-      console.error("Database is not loaded; cannot perform search");
-    }
-    const index = this.indices.find(i => i.options.name === indexName);
-
-    return index.get(id) as IndexSearchResult<unknown>;
+    return uniqBy(sortedResults, result => [result._id, result._index].join());
   }
 }
