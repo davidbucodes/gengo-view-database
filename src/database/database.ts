@@ -1,6 +1,7 @@
-import { uniqBy } from "lodash";
+import { uniq, uniqBy } from "lodash";
 import { isRomaji, toHiragana, toKatakana } from "wanakana";
-import { IIndex } from "./database.types";
+import { kanjiRegexp } from "../regexp/kanjiRegexp";
+import { IIndex, IdField } from "./database.types";
 import { KanjiDocument, NameDocument, VocabularyDocument } from "./doc.types";
 import { Index } from "./index";
 
@@ -11,6 +12,7 @@ export class Database {
     kanjiIndex: Index<KanjiDocument>;
   };
   static all: Database;
+  static kanjiToId: Record<string, number>;
 
   static async load({
     nameIndexUrl,
@@ -28,6 +30,7 @@ export class Database {
     ]);
     this.indices = { nameIndex, vocabularyIndex, kanjiIndex };
     this.all = new Database();
+    this.all.initKanjiToId();
   }
 
   private static async loadIndex<DocType>(url: string) {
@@ -88,6 +91,27 @@ export class Database {
     const sortedResults =
       results.sort(({ _score: a }, { _score: b }) => b - a) || [];
 
-    return uniqBy(sortedResults, result => [result._id, result._index].join());
+    const kanjis = uniq(terms.map(term => term.match(kanjiRegexp)).flat());
+    const kanjiDocuments = kanjis
+      .map(kanji => {
+        const kanjiId = Database.kanjiToId[kanji];
+        if (Number.isInteger(kanjiId)) {
+          return Database.indices.kanjiIndex.get(kanjiId);
+        }
+      })
+      .filter(doc => doc);
+
+    return uniqBy([...kanjiDocuments, ...sortedResults], result =>
+      [result._id, result._index].join()
+    );
+  }
+
+  private initKanjiToId() {
+    const kanjiToId: Record<string, IdField> = {};
+    Database.indices.kanjiIndex.documents.reduce((acc, curr, index) => {
+      acc[curr.kanji] = index;
+      return acc;
+    }, kanjiToId);
+    Database.kanjiToId = kanjiToId;
   }
 }
