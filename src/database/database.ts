@@ -74,10 +74,11 @@ export class Database {
 
     const kana = [toHiragana(term), toKatakana(term)]
       .map(k => {
-        if (/[a-zA-Z]/.test(k.charAt(k.length - 1))) {
-          return k.slice(0, -1);
+        let term = k;
+        while (/[a-zA-Z]/.test(term.charAt(k.length - 1))) {
+          term.slice(0, -1);
         }
-        return k;
+        return term;
       })
       .filter(t => t);
 
