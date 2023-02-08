@@ -101,7 +101,6 @@ export class Database {
       await Promise.all(
         termToIndexMap.map(([term, index]) => {
           const scorePenalty = term === validTerm ? 0 : 0.1;
-          console.log(term, validTerm, scorePenalty);
           return new Promise<ReturnType<typeof index.searchText>>(resolve => {
             const results = index.searchText(term, { scorePenalty });
             resolve(results);
