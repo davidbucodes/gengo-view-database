@@ -75,8 +75,8 @@ export class Database {
     const kana = [toHiragana(term), toKatakana(term)]
       .map(k => {
         let term = k;
-        while (/[a-zA-Z]/.test(term.charAt(k.length - 1))) {
-          term.slice(0, -1);
+        while (/[a-zA-Z]/.test(term.charAt(term.length - 1))) {
+          term = term.slice(0, -1);
         }
         return term;
       })
