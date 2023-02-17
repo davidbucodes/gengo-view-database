@@ -1,7 +1,8 @@
 import { uniq, uniqBy } from "lodash";
 import { isRomaji, toHiragana, toKatakana } from "wanakana";
+import { isKanjiRegexp } from "../regexp/isKanjiRegexp";
+import { isLatinCharactersRegexp } from "../regexp/isLatinCharactersRegexp";
 import { isValidRomajiRegexp } from "../regexp/isValidRomajiRegexp";
-import { kanjiRegexp } from "../regexp/kanjiRegexp";
 import { IIndex, IdField } from "./database.types";
 import { KanjiDocument, NameDocument, VocabularyDocument } from "./doc.types";
 import { Index } from "./index";
@@ -99,7 +100,9 @@ export class Database {
       )
       .flat();
 
-    const isEnglish = !isValidRomajiRegexp.test(validTerm);
+    const isEnglish =
+      isLatinCharactersRegexp.test(validTerm) &&
+      !isValidRomajiRegexp.test(validTerm);
     console.log({ isEnglish });
     const results = (
       await Promise.all(
@@ -120,7 +123,7 @@ export class Database {
     const sortedResults =
       results.sort(({ _score: a }, { _score: b }) => b - a) || [];
 
-    const kanjis = uniq(terms.map(term => term.match(kanjiRegexp)).flat());
+    const kanjis = uniq(terms.map(term => term.match(isKanjiRegexp)).flat());
     const kanjiDocuments = kanjis
       .map(kanji => {
         const kanjiId = Database.kanjiToId[kanji];
