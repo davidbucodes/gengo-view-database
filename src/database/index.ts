@@ -9,7 +9,11 @@ import { IndexDocument } from "./doc.types";
 export class Index<TDocument extends IndexDocument>
   implements IIndex<TDocument>
 {
-  options: Options<TDocument> = { name: null, searchableTextFields: [] };
+  options: Options<TDocument> = {
+    name: null,
+    searchableJapaneseTextFields: [],
+    searchableEnglishTextFields: [],
+  };
   documents: TDocument[] = [];
 
   constructor(options: Options<TDocument>) {
@@ -22,15 +26,27 @@ export class Index<TDocument extends IndexDocument>
 
   async searchText(
     term: string,
-    { scorePenalty }: { scorePenalty: number } = { scorePenalty: 0 }
+    {
+      scorePenalty,
+      english,
+      japanese,
+    }: { scorePenalty: number; english: boolean; japanese: boolean } = {
+      scorePenalty: 0,
+      japanese: true,
+      english: false,
+    }
   ): Promise<IndexSearchResult<TDocument>[]> {
-    const { searchableTextFields, name: index } = this.options;
+    const { name: index } = this.options;
     const results: IndexSearchResult<TDocument>[] = [];
+    const fields = [
+      ...(english ? this.options.searchableEnglishTextFields : []),
+      ...(japanese ? this.options.searchableJapaneseTextFields : []),
+    ];
     let id = -1;
     for (const doc of this.documents) {
       id++;
       const valContaining = (() => {
-        for (const field of searchableTextFields) {
+        for (const field of fields) {
           const val = doc[field];
           const valContaining = Array.isArray(val)
             ? (val.find(i => i?.indexOf(term) >= 0) as string)

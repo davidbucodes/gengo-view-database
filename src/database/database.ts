@@ -1,5 +1,6 @@
 import { uniq, uniqBy } from "lodash";
 import { isRomaji, toHiragana, toKatakana } from "wanakana";
+import { isValidRomajiRegexp } from "../regexp/isValidRomajiRegexp";
 import { kanjiRegexp } from "../regexp/kanjiRegexp";
 import { IIndex, IdField } from "./database.types";
 import { KanjiDocument, NameDocument, VocabularyDocument } from "./doc.types";
@@ -62,7 +63,7 @@ export class Database {
     });
   }
 
-  async searchJapanese(term: string = "") {
+  async searchText(term: string = "") {
     if (!Database.indices) {
       console.error("Database is not loaded; cannot perform search");
       return [];
@@ -98,12 +99,18 @@ export class Database {
       )
       .flat();
 
+    const isEnglish = !isValidRomajiRegexp.test(validTerm);
+    console.log({ isEnglish });
     const results = (
       await Promise.all(
         termToIndexMap.map(([term, index]) => {
           const scorePenalty = term === validTerm ? 0 : 0.1;
           return new Promise<ReturnType<typeof index.searchText>>(resolve => {
-            const results = index.searchText(term, { scorePenalty });
+            const results = index.searchText(term, {
+              scorePenalty,
+              japanese: !isEnglish,
+              english: isEnglish,
+            });
             resolve(results);
           });
         })

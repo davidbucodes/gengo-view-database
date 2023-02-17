@@ -6,12 +6,13 @@ export type IdField = number;
 
 export interface Options<TDocument> {
   name: IndexName;
-  searchableTextFields: SearchableTextField<TDocument>;
+  searchableJapaneseTextFields: SearchableTextField<TDocument>;
+  searchableEnglishTextFields: SearchableTextField<TDocument>;
 }
 
 type SearchableTextType = string | string[];
 
-type SearchableTextField<TDocument> = {
+export type SearchableTextField<TDocument> = {
   [T in keyof TDocument]: TDocument[T] extends SearchableTextType ? T : never;
 }[keyof TDocument][];
 
