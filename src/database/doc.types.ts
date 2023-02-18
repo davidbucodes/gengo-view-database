@@ -28,3 +28,8 @@ export interface VocabularyDocument extends IndexDocument {
   meaning: string[];
   reading: string[];
 }
+
+export interface SentenceDocument extends IndexDocument {
+  j: string;
+  e: string;
+}

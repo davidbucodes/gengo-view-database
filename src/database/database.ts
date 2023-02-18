@@ -4,7 +4,12 @@ import { isKanjiRegexp } from "../regexp/isKanjiRegexp";
 import { isLatinCharactersRegexp } from "../regexp/isLatinCharactersRegexp";
 import { isValidRomajiRegexp } from "../regexp/isValidRomajiRegexp";
 import { IIndex, IdField } from "./database.types";
-import { KanjiDocument, NameDocument, VocabularyDocument } from "./doc.types";
+import {
+  KanjiDocument,
+  NameDocument,
+  SentenceDocument,
+  VocabularyDocument,
+} from "./doc.types";
 import { Index } from "./index";
 
 export class Database {
@@ -12,8 +17,9 @@ export class Database {
     nameIndex: Index<NameDocument>;
     vocabularyIndex: Index<VocabularyDocument>;
     kanjiIndex: Index<KanjiDocument>;
+    sentenceIndex: Index<SentenceDocument>;
   };
-  static all: Database;
+  static termsIndices: Database;
   static kanjiToId: Record<string, number>;
 
   static async load(
@@ -21,40 +27,51 @@ export class Database {
       nameIndexUrl,
       vocabularyIndexUrl,
       kanjiIndexUrl,
+      sentenceIndexUrl,
     }: {
       nameIndexUrl: string;
       vocabularyIndexUrl: string;
       kanjiIndexUrl: string;
+      sentenceIndexUrl: string;
     },
     onProgress: (percentage: number) => void
   ) {
     let percentage = 0;
 
-    const [nameIndex, vocabularyIndex, kanjiIndex] = await Promise.all([
-      new Promise<Index<NameDocument>>(async resolve => {
-        const index = await this.loadIndex<NameDocument>(nameIndexUrl);
-        percentage += 100 / 3;
-        onProgress(Math.ceil(percentage));
-        resolve(index);
-      }),
-      new Promise<Index<VocabularyDocument>>(async resolve => {
-        const index = await this.loadIndex<VocabularyDocument>(
-          vocabularyIndexUrl
-        );
-        percentage += 100 / 3;
-        onProgress(Math.ceil(percentage));
-        resolve(index);
-      }),
-      new Promise<Index<KanjiDocument>>(async resolve => {
-        const index = await this.loadIndex<KanjiDocument>(kanjiIndexUrl);
-        percentage += 100 / 3;
-        onProgress(Math.ceil(percentage));
-        resolve(index);
-      }),
-    ]);
-    this.indices = { nameIndex, vocabularyIndex, kanjiIndex };
-    this.all = new Database();
-    this.all.initKanjiToId();
+    const [nameIndex, vocabularyIndex, kanjiIndex, sentenceIndex] =
+      await Promise.all([
+        new Promise<Index<NameDocument>>(async resolve => {
+          const index = await this.loadIndex<NameDocument>(nameIndexUrl);
+          percentage += 100 / 4;
+          onProgress(Math.ceil(percentage));
+          resolve(index);
+        }),
+        new Promise<Index<VocabularyDocument>>(async resolve => {
+          const index = await this.loadIndex<VocabularyDocument>(
+            vocabularyIndexUrl
+          );
+          percentage += 100 / 4;
+          onProgress(Math.ceil(percentage));
+          resolve(index);
+        }),
+        new Promise<Index<KanjiDocument>>(async resolve => {
+          const index = await this.loadIndex<KanjiDocument>(kanjiIndexUrl);
+          percentage += 100 / 4;
+          onProgress(Math.ceil(percentage));
+          resolve(index);
+        }),
+        new Promise<Index<SentenceDocument>>(async resolve => {
+          const index = await this.loadIndex<SentenceDocument>(
+            sentenceIndexUrl
+          );
+          percentage += 100 / 4;
+          onProgress(Math.ceil(percentage));
+          resolve(index);
+        }),
+      ]);
+    this.indices = { nameIndex, vocabularyIndex, kanjiIndex, sentenceIndex };
+    this.termsIndices = new Database();
+    this.termsIndices.initKanjiToId();
   }
 
   private static async loadIndex<DocType>(url: string) {
