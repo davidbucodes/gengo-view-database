@@ -1,1 +1,1 @@
-export const isLatinCharactersRegexp = /^[a-z]*$/i;
+export const isLatinCharactersRegexp = /^[a-z\s]*$/i;
