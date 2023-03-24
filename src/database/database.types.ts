@@ -1,6 +1,6 @@
 import { IndexDocument } from "./doc.types";
 
-export type IndexName = "name" | "vocabulary" | "kanji";
+export type IndexName = "name" | "vocabulary" | "kanji" | "sentence";
 
 export type IdField = number;
 
