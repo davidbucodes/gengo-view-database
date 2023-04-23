@@ -3,7 +3,7 @@ import { isRomaji, toHiragana, toKatakana } from "wanakana";
 import { isKanjiRegexp } from "../regexp/isKanjiRegexp";
 import { isLatinCharactersRegexp } from "../regexp/isLatinCharactersRegexp";
 import { isValidRomajiRegexp } from "../regexp/isValidRomajiRegexp";
-import { IIndex, IdField } from "./database.types";
+import { IIndex, IdField, IndexName } from "./database.types";
 import {
   KanjiDocument,
   NameDocument,
@@ -79,6 +79,10 @@ export class Database {
       const json = (await (await fetch(url)).json()) as IIndex<DocType>;
       return res(Index.from<DocType>(json));
     });
+  }
+
+  static getById<T>({ dbId, dbIndex }: { dbId: number; dbIndex: IndexName }) {
+    return Database.indices[`${dbIndex}Index`].get(dbId) as T;
   }
 
   async searchText(term: string = "") {
