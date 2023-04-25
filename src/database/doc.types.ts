@@ -15,9 +15,21 @@ export interface KanjiDocument extends IndexDocument {
 }
 
 export interface NameDocument extends IndexDocument {
+  /**
+   * Name
+   */
   n: string;
+  /**
+   * Description
+   */
   d: string;
+  /**
+   * Name type
+   */
   t: string;
+  /**
+   * Reading
+   */
   r: string[];
 }
 
