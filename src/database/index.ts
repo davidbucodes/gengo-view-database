@@ -1,3 +1,4 @@
+import { logCalls } from "../decorators/logCall";
 import {
   IIndex,
   IndexSearchResult,
@@ -20,17 +21,23 @@ export class Index<TDocument extends IndexDocument>
     this.options = options;
   }
 
+  @logCalls
   addDocuments(documents: TDocument[]): void {
     this.documents = [...this.documents, ...documents];
   }
 
+  @logCalls
   async searchText(
     term: string,
     {
       scorePenalty,
       english,
       japanese,
-    }: { scorePenalty: number; english: boolean; japanese: boolean } = {
+    }: {
+      scorePenalty: number;
+      english: boolean;
+      japanese: boolean;
+    } = {
       scorePenalty: 0,
       japanese: true,
       english: false,
@@ -69,6 +76,7 @@ export class Index<TDocument extends IndexDocument>
     return results;
   }
 
+  @logCalls
   async searchNumber(
     term: number,
     field: SearchableNumberField<TDocument>[number]
@@ -90,6 +98,7 @@ export class Index<TDocument extends IndexDocument>
     return results;
   }
 
+  @logCalls
   get(id: number): IndexSearchResult<TDocument> {
     const doc = this.documents[id];
     return this.documentToSearchResult(doc, this.options.name, id);
@@ -102,6 +111,7 @@ export class Index<TDocument extends IndexDocument>
     } as IIndex<TDocument>);
   }
 
+  @logCalls
   static from<TDocument extends IndexDocument>(
     parsedIndex: IIndex<TDocument>
   ): Index<TDocument> {

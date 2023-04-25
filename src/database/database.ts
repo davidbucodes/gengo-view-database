@@ -1,5 +1,6 @@
 import { uniq, uniqBy } from "lodash";
 import { isRomaji, toHiragana, toKatakana } from "wanakana";
+import { logCalls } from "../decorators/logCall";
 import { isKanjiRegexp } from "../regexp/isKanjiRegexp";
 import { isLatinCharactersRegexp } from "../regexp/isLatinCharactersRegexp";
 import { isValidRomajiRegexp } from "../regexp/isValidRomajiRegexp";
@@ -22,6 +23,7 @@ export class Database {
   static termsIndices: Database;
   static kanjiToId: Record<string, number>;
 
+  @logCalls
   static async load(
     {
       nameIndexUrl,
@@ -74,6 +76,7 @@ export class Database {
     this.termsIndices.initKanjiToId();
   }
 
+  @logCalls
   private static async loadIndex<DocType>(url: string) {
     return new Promise<Index<DocType>>(async res => {
       const json = (await (await fetch(url)).json()) as IIndex<DocType>;
@@ -81,10 +84,12 @@ export class Database {
     });
   }
 
+  @logCalls
   static getById<T>({ dbId, dbIndex }: { dbId: number; dbIndex: IndexName }) {
     return Database.indices[`${dbIndex}Index`].get(dbId) as T;
   }
 
+  @logCalls
   async searchText(term: string = "") {
     if (!Database.indices) {
       console.error("Database is not loaded; cannot perform search");
@@ -159,6 +164,7 @@ export class Database {
     );
   }
 
+  @logCalls
   private initKanjiToId() {
     const kanjiToId: Record<string, IdField> = {};
     Database.indices.kanjiIndex.documents.reduce((acc, curr, index) => {
