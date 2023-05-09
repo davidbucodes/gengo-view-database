@@ -1,0 +1,27 @@
+name: Publish package to GitHub Packages
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - src/**
+  release:
+    types: [published]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@gengo-view"
+      - run: npm ci
+      - run: npm run build
+      - run: cd dist
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
