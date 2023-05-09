@@ -34,7 +34,10 @@ const config: Configuration = {
   },
   plugins: [
     new WebpackCopyPlugin({
-      patterns: [{ from: "./package.json", to: "./package.json" }],
+      patterns: [
+        { from: "./package.json", to: "./package.json" },
+        { from: ".npmrc", to: ".npmrc" },
+      ],
     }),
   ],
 };
