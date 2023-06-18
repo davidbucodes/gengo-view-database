@@ -90,7 +90,10 @@ export class Database {
   }
 
   @logCalls
-  async searchText(term: string = "") {
+  async searchText(
+    term: string = "",
+    options?: { forceJapanese?: boolean; forceEnglish?: boolean }
+  ) {
     if (!Database.indices) {
       console.error("Database is not loaded; cannot perform search");
       return [];
@@ -100,15 +103,7 @@ export class Database {
       return [];
     }
 
-    const kana = [toHiragana(term), toKatakana(term)]
-      .map(k => {
-        let term = k;
-        while (/[a-zA-Z]/.test(term.charAt(term.length - 1))) {
-          term = term.slice(0, -1);
-        }
-        return term;
-      })
-      .filter(t => t);
+    const kana = [toHiragana(term), toKatakana(term)].filter(t => t);
 
     const validTerm = !isRomaji(term) ? term : term.length > 1 ? term : "";
 
@@ -135,11 +130,20 @@ export class Database {
         termToIndexMap.map(([term, index]) => {
           const scorePenalty = term === validTerm ? 0 : 0.1;
           return new Promise<ReturnType<typeof index.searchText>>(resolve => {
-            const results = index.searchText(term, {
+            const { forceEnglish, forceJapanese } = options || {};
+            const query = {
               scorePenalty,
-              japanese: !isEnglish,
-              english: isEnglish,
-            });
+              japanese:
+                forceEnglish && !forceJapanese
+                  ? false
+                  : forceJapanese || !isEnglish,
+              english:
+                forceJapanese && !forceEnglish
+                  ? false
+                  : forceEnglish || isEnglish,
+            };
+            console.log({ term, query });
+            const results = index.searchText(term, query);
             resolve(results);
           });
         })
