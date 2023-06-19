@@ -5,3 +5,5 @@ export * from "./database/index";
 export * from "./database/jlpt";
 export * from "./readableData/readableNameDocumentType";
 export * from "./regexp/isKanjiRegexp";
+export * from "./regexp/isLatinCharactersRegexp";
+export * from "./regexp/isValidRomajiRegexp";
