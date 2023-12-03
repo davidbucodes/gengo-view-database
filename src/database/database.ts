@@ -92,7 +92,11 @@ export class Database {
   @logCalls
   async searchText(
     term: string = "",
-    options?: { forceJapanese?: boolean; forceEnglish?: boolean }
+    options: {
+      forceJapanese?: boolean;
+      forceEnglish?: boolean;
+      addKanjiAtBottom: boolean;
+    } = { addKanjiAtBottom: false }
   ) {
     if (!Database.indices) {
       console.error("Database is not loaded; cannot perform search");
@@ -162,8 +166,11 @@ export class Database {
         }
       })
       .filter(doc => doc);
+    const resultsWithKanji = options.addKanjiAtBottom
+      ? [...sortedResults, ...kanjiDocuments]
+      : [...kanjiDocuments, ...sortedResults];
 
-    return uniqBy([...kanjiDocuments, ...sortedResults], result =>
+    return uniqBy(resultsWithKanji, result =>
       [result._id, result._index].join()
     );
   }
