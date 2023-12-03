@@ -33,10 +33,12 @@ export class Index<TDocument extends IndexDocument>
       scorePenalty,
       english,
       japanese,
+      sortByScore,
     }: {
       scorePenalty: number;
       english: boolean;
       japanese: boolean;
+      sortByScore?: true;
     } = {
       scorePenalty: 0,
       japanese: true,
@@ -73,7 +75,11 @@ export class Index<TDocument extends IndexDocument>
         results.push(this.documentToSearchResult(doc, index, id, score));
       }
     }
-    return results;
+    if (!sortByScore) {
+      return results;
+    } else {
+      return results.sort(({ _score: a }, { _score: b }) => b - a) || [];
+    }
   }
 
   @logCalls
