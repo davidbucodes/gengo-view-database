@@ -34,11 +34,13 @@ export class Index<TDocument extends IndexDocument>
       english,
       japanese,
       sortByScore,
+      documents,
     }: {
       scorePenalty: number;
       english: boolean;
       japanese: boolean;
       sortByScore?: true;
+      documents?: TDocument[];
     } = {
       scorePenalty: 0,
       japanese: true,
@@ -52,7 +54,8 @@ export class Index<TDocument extends IndexDocument>
       ...(japanese ? this.options.searchableJapaneseTextFields : []),
     ];
     let id = -1;
-    for (const doc of this.documents) {
+    const documentsSet = documents || this.documents;
+    for (const doc of documentsSet) {
       id++;
       const valContaining = (() => {
         for (const field of fields) {
