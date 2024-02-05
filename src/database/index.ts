@@ -136,10 +136,10 @@ export class Index<TDocument extends IndexDocument>
     _score?: number
   ): IndexSearchResult<TDocument> {
     return {
-      ...doc,
       _index,
       _id,
       _score,
+      ...doc,
     } as IndexSearchResult<TDocument>;
   }
 }
