@@ -6,7 +6,7 @@ export function logCalls(
   let method = descriptor.value!;
 
   descriptor.value = function () {
-    console.log(propertyName, arguments);
+    console.debug(propertyName, arguments);
     return method.apply(this, arguments);
   };
 }

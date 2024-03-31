@@ -4,6 +4,7 @@ import {
   IndexSearchResult,
   Options,
   SearchableNumberField,
+  SearchableTextField,
 } from "./database.types";
 import { IndexDocument } from "./doc.types";
 
@@ -34,13 +35,15 @@ export class Index<TDocument extends IndexDocument>
       english,
       japanese,
       sortByScore,
-      documents,
+      documents = null,
+      indexFields,
     }: {
       scorePenalty: number;
       english: boolean;
       japanese: boolean;
       sortByScore?: true;
       documents?: TDocument[];
+      indexFields?: SearchableTextField<TDocument>;
     } = {
       scorePenalty: 0,
       japanese: true,
@@ -49,7 +52,7 @@ export class Index<TDocument extends IndexDocument>
   ): Promise<IndexSearchResult<TDocument>[]> {
     const { name: index } = this.options;
     const results: IndexSearchResult<TDocument>[] = [];
-    const fields = [
+    const fields = indexFields || [
       ...(english ? this.options.searchableEnglishTextFields : []),
       ...(japanese ? this.options.searchableJapaneseTextFields : []),
     ];
@@ -88,12 +91,14 @@ export class Index<TDocument extends IndexDocument>
   @logCalls
   async searchNumber(
     term: number,
-    field: SearchableNumberField<TDocument>[number]
+    field: SearchableNumberField<TDocument>[number],
+    documents?: TDocument[]
   ): Promise<IndexSearchResult<TDocument>[]> {
     const { name: index } = this.options;
     const results: IndexSearchResult<TDocument>[] = [];
     let id = 0;
-    for (const doc of this.documents) {
+    let documentsSet = documents || this.documents;
+    for (const doc of documentsSet) {
       const val = doc[field];
       const equalsOrContaining = Array.isArray(val)
         ? (val.find(i => i === term) as number)

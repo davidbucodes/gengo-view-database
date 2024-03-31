@@ -96,7 +96,9 @@ export class Database {
       forceJapanese?: boolean;
       forceEnglish?: boolean;
       addKanjiAtBottom: boolean;
-    } = { addKanjiAtBottom: false }
+      addKanji: boolean;
+      documents?: Awaited<ReturnType<typeof Database.termsIndices.searchText>>;
+    } = { addKanji: true, addKanjiAtBottom: false }
   ) {
     if (!Database.indices) {
       console.error("Database is not loaded; cannot perform search");
@@ -135,7 +137,7 @@ export class Database {
           const scorePenalty = term === validTerm ? 0 : 0.1;
           return new Promise<ReturnType<typeof index.searchText>>(resolve => {
             const { forceEnglish, forceJapanese } = options || {};
-            const query = {
+            const query: Parameters<typeof index.searchText>[1] = {
               scorePenalty,
               japanese:
                 forceEnglish && !forceJapanese
@@ -145,9 +147,12 @@ export class Database {
                 forceJapanese && !forceEnglish
                   ? false
                   : forceEnglish || isEnglish,
+              documents: options.documents?.filter(
+                doc => doc._index === index.options.name
+              ) as any,
             };
             console.log({ term, query });
-            const results = index.searchText(term, query);
+            const results = index.searchText(term, query as any);
             resolve(results);
           });
         })
@@ -166,9 +171,11 @@ export class Database {
         }
       })
       .filter(doc => doc);
-    const resultsWithKanji = options.addKanjiAtBottom
-      ? [...sortedResults, ...kanjiDocuments]
-      : [...kanjiDocuments, ...sortedResults];
+    const resultsWithKanji = options.addKanji
+      ? options.addKanjiAtBottom
+        ? [...sortedResults, ...kanjiDocuments]
+        : [...kanjiDocuments, ...sortedResults]
+      : [...sortedResults];
 
     return uniqBy(resultsWithKanji, result =>
       [result._id, result._index].join()
