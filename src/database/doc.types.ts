@@ -8,6 +8,7 @@ export interface KanjiDocument extends IndexDocument {
   strokeCount?: number[];
   on?: string[];
   kun?: string[];
+  kunS?: string[];
   pinyin?: string[];
   meaning?: string[];
   nanori?: string[];
