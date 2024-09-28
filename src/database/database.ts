@@ -1,5 +1,4 @@
 import { uniq, uniqBy } from "lodash";
-import { isRomaji, toHiragana, toKatakana } from "wanakana";
 import { logCalls } from "../decorators/logCall";
 import { isKanjiRegexp } from "../regexp/isKanjiRegexp";
 import { isLatinCharactersRegexp } from "../regexp/isLatinCharactersRegexp";
@@ -12,6 +11,7 @@ import {
   VocabularyDocument,
 } from "./doc.types";
 import { Index } from "./index";
+import { extractTokensFromTerm } from "./extractTokensFromTerm";
 
 export class Database {
   static indices: {
@@ -98,39 +98,33 @@ export class Database {
       addKanjiAtBottom: boolean;
       addKanji: boolean;
       documents?: Awaited<ReturnType<typeof Database.termsIndices.searchText>>;
+      termIndices?: IndexName[];
     } = { addKanji: true, addKanjiAtBottom: false }
   ) {
     if (!Database.indices) {
       console.error("Database is not loaded; cannot perform search");
       return [];
     }
-    term = term.trim();
-    if (!term) {
-      return [];
-    }
 
-    const kana = [toHiragana(term), toKatakana(term)].filter(t => t);
-
-    const validTerm = !isRomaji(term) ? term : term.length > 1 ? term : "";
-
-    const terms = [...new Set([validTerm, ...kana])].filter(t => t);
-
-    const allIndices = [
+    let allTermsIndices = [
       Database.indices.kanjiIndex,
       Database.indices.vocabularyIndex,
       Database.indices.nameIndex,
     ];
 
-    const termToIndexMap = terms
-      .map(term =>
-        allIndices.map(index => [term, index] as [string, typeof index])
-      )
-      .flat();
+    if (options.termIndices) {
+      allTermsIndices = allTermsIndices.filter(index =>
+        options.termIndices.includes(index.options.name)
+      );
+    }
 
-    const isEnglish =
-      isLatinCharactersRegexp.test(validTerm) &&
-      !isValidRomajiRegexp.test(validTerm);
-    console.log({ isEnglish });
+    const { validTerm, isValidTermInEnglish, tokens } =
+      extractTokensFromTerm(term);
+
+    const termToIndexMap = tokens.flatMap(token =>
+      allTermsIndices.map(index => [token, index] as [string, typeof index])
+    );
+
     const results = (
       await Promise.all(
         termToIndexMap.map(([term, index]) => {
@@ -142,11 +136,11 @@ export class Database {
               japanese:
                 forceEnglish && !forceJapanese
                   ? false
-                  : forceJapanese || !isEnglish,
+                  : forceJapanese || !isValidTermInEnglish,
               english:
                 forceJapanese && !forceEnglish
                   ? false
-                  : forceEnglish || isEnglish,
+                  : forceEnglish || isValidTermInEnglish,
               documents: options.documents?.filter(
                 doc => doc._index === index.options.name
               ) as any,
@@ -162,7 +156,7 @@ export class Database {
     const sortedResults =
       results.sort(({ _score: a }, { _score: b }) => b - a) || [];
 
-    const kanjis = uniq(terms.map(term => term.match(isKanjiRegexp)).flat());
+    const kanjis = uniq(tokens.map(token => token.match(isKanjiRegexp)).flat());
     const kanjiDocuments = kanjis
       .map(kanji => {
         const kanjiId = Database.kanjiToId[kanji];
